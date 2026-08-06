@@ -1,0 +1,52 @@
+## .NET / Visual Studio / Rider
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+*.userosscache
+*.sln.docstates
+
+## Blazor WASM build output
+wwwroot/_framework/
+wwwroot/_content/
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+[Ll]og/
+
+## EF Core
+*.mdf
+*.ldf
+*.ndf
+
+## Secrets — NEVER commit real values, use user-secrets or Azure App Config
+appsettings.Local.json
+**/appsettings.Production.json
+*.pfx
+secrets.json
+
+## Node (if any tooling needs it, e.g. Tailwind/PostCSS for Blazor)
+node_modules/
+npm-debug.log*
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Test results
+TestResults/
+coverage/
+*.trx
+
+## Rider
+.idea/
+
+## Misc
+*.log
+*.tmp

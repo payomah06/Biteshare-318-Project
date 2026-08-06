@@ -1,0 +1,29 @@
+# Default owners for everything in the repo, unless a later match overrides it
+*                                   @Somuah @Stephanie
+
+# Phase 0 — foundations
+/.github/                          @Priscilla @Somuah
+/CONTRIBUTING.md                   @Stephanie
+
+# Data & Auth layer
+/src/BiteShare.Data/                @Roselyn
+/src/BiteShare.Api/Controllers/AuthController.cs  @Horoya
+
+# Stream A — Collaborative Cart
+/src/BiteShare.Api/Hubs/OrderHub.cs @Aaron
+/src/BiteShare.Client/Pages/        @Precious @Joseph
+
+# Stream B — Cost Splitter & Receipts
+/src/BiteShare.Api/Controllers/ReceiptsController.cs @Kingsella @Roselyn
+
+# Stream C — Order Status & Payments
+/src/BiteShare.Api/Controllers/OrdersController.cs   @Olivia @Horoya
+
+# Shared contracts — anyone touching these should expect broad review
+/src/BiteShare.Shared/              @Aaron @Kingsella @Olivia @Roselyn
+
+# Tests
+/tests/                             @Obadiah
+
+# Deployment
+/.github/workflows/                 @Priscilla

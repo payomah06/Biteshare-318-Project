@@ -1,59 +1,48 @@
 # Contributing to BiteShare
 
-This doc covers how our team of 12 works in this repo day to day. Read it before your first PR.
-
-## Repo structure
-- `BiteShare.Api` — ASP.NET Core Web API
-- `BiteShare.Client` — Blazor WASM frontend
-- `BiteShare.Shared` — DTOs/models used by both API and Client
-- `BiteShare.Data` — EF Core context + migrations
-- `BiteShare.Tests` — unit/integration/E2E tests
+This is the team's one-pager on conventions, so 12 people's code doesn't diverge. Keep it short; add to it only when a real conflict comes up.
 
 ## Branching
-- `main` is protected — no direct pushes, ever.
-- One branch per Jira ticket, branched off latest `main`:
-  ```
-  feature/BS-123-signalr-cart-hub
-  bugfix/BS-145-split-rounding-error
-  chore/BS-101-ef-migrations
-  ```
-- Pull `main` daily, especially if you're touching `BiteShare.Shared` or `OrderHub` — three streams (Cart, Splitter, Payments) all depend on these and drift fast.
 
-## Workflow
-1. `git pull origin main`
-2. `git checkout -b feature/BS-XXX-short-desc`
-3. Commit in small, logical chunks (see commit format below)
-4. `git push -u origin feature/BS-XXX-short-desc`
-5. Open a PR into `main` using the PR template — link the Jira ticket
-6. Request **2 reviewers** (required before merge)
-7. If your change touches `BiteShare.Shared` or `OrderHub`, post a heads-up in the team channel *before* merging
-8. Address feedback, wait for CI to pass, then squash-merge
-9. Delete the branch after merge
+- `main` is protected — no direct pushes.
+- One feature branch per Jira ticket: `feature/<ticket-id>-short-description`, e.g. `feature/BS-42-cart-signalr-hub`.
+- Bug fixes: `fix/<ticket-id>-short-description`.
+- Rebase or merge `main` into your branch before opening a PR, don't let it drift.
 
-## Commit message format
+## Commit messages
+
 ```
-BS-123: short summary of the change
+<ticket-id>: <short, imperative summary>
 
-Optional longer description if the change needs context.
+<optional body — what changed and why, not what's obvious from the diff>
 ```
-- Present tense, concise summary line (~50 chars)
-- Always reference the ticket number
 
-## Code review expectations
-- 2 approvals minimum before merge
-- Reviewers check: does it work, does it follow naming conventions, does it touch shared code safely, are tests included where relevant
-- Don't rubber-stamp — with 12 people, review is the main defense against silent bugs (especially in the splitter logic)
+Example: `BS-42: add OrderHub broadcast for cart-add events`
 
-## Testing
-- New business logic (especially cost-splitting) needs unit tests
-- API changes should have integration test coverage where practical
-- CI (GitHub Actions) runs build + tests on every PR — must pass before merge
+## Pull requests
 
-## Naming conventions
-- C# classes/methods: PascalCase
-- Private fields: `_camelCase`
-- Razor components: PascalCase, one component per file
-- Branches/tickets: always prefixed with the Jira ticket ID (`BS-XXX`)
+- PR review required, **2 approvals minimum** before merging to `main`.
+- Use the PR template (`.github/PULL_REQUEST_TEMPLATE.md`) — link the Jira ticket, describe what changed, note how it was tested.
+- Keep PRs scoped to one ticket. If it's sprawling, split it.
+- If your change touches shared models in `BiteShare.Shared` or the `OrderHub` contract, flag it in the team channel **before** merging — Streams A/B/C all depend on these, and a silent breaking change costs everyone else time.
+
+## Coding standards
+
+- **Naming:** PascalCase for classes/methods/properties, camelCase for locals/parameters, `_camelCase` for private fields. Interfaces prefixed `I`.
+- **Async:** suffix async methods with `Async`; always accept a `CancellationToken` on API-facing async methods where feasible.
+- **DTOs vs entities:** never return EF Core entities directly from API endpoints — map to a DTO in `BiteShare.Shared`.
+- **Nullable reference types** are enabled solution-wide — don't suppress warnings with `!` without a comment explaining why it's safe.
+- **Formatting:** run `dotnet format` before pushing (a pre-commit hook or CI check will catch anything missed).
+
+## Tests
+
+- New business logic (especially anything in the cost-splitter) needs a unit test in the same PR.
+- Don't merge with a red CI build.
+
+## Ticket sizing
+
+Tickets should be sized to 1–3 days. If a ticket is bigger than that, break it down in Jira before starting.
 
 ## Scope discipline
-With 12 people and 6 sprints, the biggest risk is over-building individual features. If a change grows beyond its ticket's scope, split it into a new ticket rather than expanding the PR.
+
+With 12 people, the biggest risk isn't lack of manpower — it's each sub-team over-building their own feature. If you're adding something not in the ticket's acceptance criteria, flag it to the Scrum Master / Project Lead before building it, don't just build it.
