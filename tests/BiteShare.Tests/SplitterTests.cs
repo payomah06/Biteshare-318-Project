@@ -10,17 +10,17 @@ namespace BiteShare.Tests;
 /// </summary>
 public class SplitterTests
 {
-    [Fact(Skip = "Implement once the splitter service exists (Stream B).")]
+    [Xunit.Fact(Skip = "Implement once the splitter service exists (Stream B).")]
     public void EqualSplit_DividesTotalEvenlyAcrossParticipants()
     {
     }
 
-    [Fact(Skip = "Implement once the splitter service exists (Stream B).")]
+    [Xunit.Fact(Skip = "Implement once the splitter service exists (Stream B).")]
     public void PerItemSplit_ChargesEachParticipantForTheirOwnItems()
     {
     }
 
-    [Fact(Skip = "Implement once the splitter service exists (Stream B).")]
+    [Xunit.Fact(Skip = "Implement once the splitter service exists (Stream B).")]
     public void Split_WithRoundingRemainder_AllocatesRemainderConsistently()
     {
     }
