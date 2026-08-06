@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/30790015/README.md)
 
 BiteShare
 BiteShare is a collaborative food ordering platform that solves a common problem in group dining: coordinating a single order among multiple people across different restaurants. Instead of informal chat threads, spreadsheets, or separate orders, BiteShare gives a group a shared, real-time ordering session with automatic cost splitting.
