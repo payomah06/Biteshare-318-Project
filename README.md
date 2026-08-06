@@ -1,20 +1,48 @@
 # BiteShare
 
-Collaborative food ordering platform — built for Web Applications & Services.
+A collaborative food ordering platform that lets a group build a shared cart in real time, split the bill fairly, and track order status together — built for the Web Applications & Services course.
+
+## The problem
+Group food orders are chaotic: someone collects orders over text, math gets messy splitting the bill, and nobody knows when the food's actually arriving. BiteShare fixes this with a live shared session — everyone adds their own items to a cart in real time, costs split automatically, and status updates push to everyone at once.
+
+## Core features
+- **Session creation & invite links** — a host spins up a session, participants join via link (with a guest/no-account flow)
+- **Live collaborative cart** — everyone in a session sees cart adds/removes/updates in real time via SignalR
+- **Smart cost splitter with PDF receipts** — subtotal/tax/tip/delivery-fee split (equal or per-item), itemized receipt generated as a PDF
+- **Real-time order status tracking** — confirmed → preparing → out for delivery → delivered, pushed live to all participants
 
 ## Tech stack
-- **API:** ASP.NET Core Web API
-- **Frontend:** Blazor WebAssembly
-- **Real-time:** SignalR
-- **Data:** EF Core + Azure SQL
-- **Hosting:** Azure App Service, GitHub Actions CI/CD
+| Layer | Technology |
+|---|---|
+| API | ASP.NET Core Web API |
+| Frontend | Blazor WebAssembly |
+| Real-time | SignalR |
+| Data | EF Core + Azure SQL |
+| Payments | Stripe .NET SDK |
+| PDF generation | QuestPDF (or similar) |
+| Hosting / CI-CD | Azure App Service, GitHub Actions |
+| Testing | bUnit / Playwright, xUnit |
 
-## Team
-12 members split across data/auth, three parallel feature streams (Cart, Splitter, Payments), design consistency, QA, DevOps, and PM/docs. See `CONTRIBUTING.md` for how we work day to day.
+## Solution structure
+```
+BiteShare.Api/       # Web API — controllers, endpoints, SignalR hub
+BiteShare.Client/     # Blazor WASM frontend
+BiteShare.Shared/     # DTOs/models shared by Api + Client
+BiteShare.Data/       # EF Core context + migrations
+BiteShare.Tests/      # Unit, integration, E2E tests
+```
 
-## Getting started (Week 1 setup)
+## Data model (core entities)
+`Session`, `Participant`, `MenuItem`, `CartItem`, `Order`, `Receipt` — schema is locked after full-team review before migrations are written (schema changes later in the project are expensive).
 
-### 1. Clone and build
+## Getting started
+
+### Prerequisites
+- .NET SDK (matching the project's target version)
+- SQL Server / Azure SQL access (or local dev DB)
+- Git + a GitHub account added as a repo collaborator
+
+### Clone and build
 ```bash
 git clone https://github.com/<org>/BiteShare.git
 cd BiteShare
@@ -22,16 +50,7 @@ dotnet restore
 dotnet build
 ```
 
-### 2. Solution structure
-```
-BiteShare.Api/       # Web API — controllers, endpoints
-BiteShare.Client/     # Blazor WASM frontend
-BiteShare.Shared/     # DTOs/models shared by Api + Client
-BiteShare.Data/       # EF Core context + migrations
-BiteShare.Tests/      # Unit, integration, E2E tests
-```
-
-### 3. Run locally
+### Run locally
 ```bash
 # API
 cd BiteShare.Api
@@ -41,27 +60,36 @@ dotnet run
 cd BiteShare.Client
 dotnet run
 ```
-Swagger/OpenAPI docs will be live at the API's `/swagger` endpoint once Phase 1 scaffolding lands.
+Swagger/OpenAPI docs are live at the API's `/swagger` endpoint once auth + scaffolding land (Phase 1).
 
-### 4. Before you branch
-- Read `CONTRIBUTING.md` (branching, commit format, PR process)
-- Pull latest `main`
-- Check Jira for your assigned ticket — every branch maps to one
+### Before you branch
+Read `CONTRIBUTING.md` for branching, commit format, and PR process. Every branch maps to a Jira ticket.
 
-## Phase 0 checklist (Week 1)
-Owner-by-owner setup so nobody's blocked once Phase 1 starts:
+## Team & ownership
+12-person team split across:
+- **Foundations / DevOps** — Priscilla (Azure, CI/CD), Somuah (Jira/backlog), Stephanie (standards, docs)
+- **Data & Auth** — Roselyn (schema), Horoya (auth/JWT/guest flow), Kingsella (API scaffolding)
+- **Stream A — Collaborative Cart** — Aaron (SignalR hub), Precious (cart UI)
+- **Stream B — Cost Splitter & Receipts** — Kingsella + Roselyn
+- **Stream C — Order Status & Payments** — Olivia (Stripe), Horoya (status pipeline)
+- **Design consistency** — Joseph (component library, nav, role-aware views across all streams)
+- **QA** — Obadiah (test automation, bug bash coordination)
 
-- [ ] **Repo & branch protection** — `main` protected, PRs require 2 approvals, feature-branch workflow documented in `CONTRIBUTING.md`
-- [ ] **Solution scaffold** — five projects created (`Api`, `Client`, `Shared`, `Data`, `Tests`), builds clean on a fresh clone
-- [ ] **Azure setup** (Priscilla) — App Service + Azure SQL provisioned, "Hello World" CI/CD pipeline proven end-to-end before anyone depends on it
-- [ ] **Jira board** (Somuah) — backlog with epics for the 4 core features + auth + payments + deployment, tickets sized 1–3 days
-- [ ] **Coding standards doc** (Stephanie) — naming conventions, commit format, PR template published
-- [ ] **All 12 members added as GitHub collaborators**
+## Project timeline (12-week / 6-sprint plan)
+| Phase | Weeks | Focus |
+|---|---|---|
+| 0 — Foundations | 1 | Repo, Azure skeleton, Jira board, standards doc |
+| 1 — Data & Auth | 2–3 | EF Core schema, Identity/JWT, API scaffolding |
+| 2 — Core Feature Build | 4–7 | Cart, Splitter, Payments (parallel streams) |
+| 3 — QA & Hardening | 8–9 | Test automation, bug bash, edge cases |
+| 4 — Deployment & Docs | 10–11 | Production CI/CD, final documentation |
+| 5 — Demo Prep | 12 | Live demo script, fallback recording |
 
-## What's next
-Once Phase 0 is done, Phase 1 (Data & Auth Layer) starts — EF Core schema design, ASP.NET Identity + JWT, and API scaffolding so the Blazor team can wire up against a live API immediately. See the full execution guide for the phase-by-phase breakdown.
-
-## Key risks to watch early
-- **SignalR + Blazor WASM reconnect logic** — prototype in Week 4, not Week 6
-- **Schema changes after Week 2** — get the EF Core schema reviewed by the whole team before migrations are written; changes later are expensive
+## Key risks
+- **SignalR + Blazor WASM reconnect logic** — the trickiest part of the project; prototype early (Week 4), not late
+- **Schema changes after Week 2** — get full-team review before migrations; changes later are costly
 - **Shared code drift** — `BiteShare.Shared` and `OrderHub` are touched by three concurrent streams; flag changes in the team channel before merging
+- **Scope creep** — with 12 people, the risk isn't manpower, it's each sub-team over-building; Scrum Master and Project Lead actively cut scope
+
+## Contributing
+See `CONTRIBUTING.md` for branching strategy, commit conventions, and the PR/review process. All PRs use `.github/PULL_REQUEST_TEMPLATE.md` and require 2 approvals before merging into `main`.
