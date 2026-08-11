@@ -1,6 +1,4 @@
 using Xunit;
-using BiteShare.Shared;
-
 
 namespace BiteShare.Tests;
 
