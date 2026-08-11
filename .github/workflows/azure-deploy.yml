@@ -1,20 +1,20 @@
-name: Build, Test, and Deploy to Azure
+```yaml id="6gh7bp"
+name: Build and Test
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   DOTNET_VERSION: "8.0.x"
-  AZURE_WEBAPP_NAME: "biteshare-api"          # update to your App Service name
   API_PROJECT_PATH: "src/BiteShare.Api/BiteShare.Api.csproj"
-  CLIENT_PROJECT_PATH: "src/BiteShare.Client/BiteShare.Client.csproj"
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -40,22 +40,4 @@ jobs:
         with:
           name: api-publish
           path: ${{ github.workspace }}/publish/api
-
-  deploy:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Download API artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: api-publish
-          path: ${{ github.workspace }}/publish/api
-
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ${{ github.workspace }}/publish/api
+```
