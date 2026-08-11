@@ -1,0 +1,248 @@
+@page "/session/{SessionId:guid}"
+@implements IAsyncDisposable
+@inject ApiClient Api
+@inject AuthTokenStore Tokens
+@inject OrderHubService Hub
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>BiteShare session</PageTitle>
+
+<div class="bite-container">
+    @if (Tokens.ParticipantToken is null || Tokens.SessionId != SessionId)
+    {
+        <p>You're not in this session yet. <a href="/">Go join or host one</a>.</p>
+    }
+    else
+    {
+        @if (_reconnectBanner is not null)
+        {
+            <div class="bite-banner">@_reconnectBanner</div>
+        }
+
+        <h2>@(Tokens.IsHost ? "Hosting" : "Joined") session</h2>
+        <span class="bite-badge status-@(_orderStatus?.ToLowerInvariant() ?? "open")">@(_orderStatus ?? "Open — building cart")</span>
+
+        <div class="bite-card">
+            <h3>Participants (@_participants.Count)</h3>
+            @foreach (var p in _participants)
+            {
+                <div class="bite-row"><span>@p.DisplayName @(p.IsHost ? "(host)" : "")</span></div>
+            }
+        </div>
+
+        @if (Tokens.IsHost)
+        {
+            <div class="bite-card">
+                <h3>Menu</h3>
+                <input placeholder="Item name" @bind="_newItemName" />
+                <input placeholder="Price" @bind="_newItemPrice" />
+                <button class="secondary" @onclick="AddMenuItem">Add menu item</button>
+            </div>
+        }
+
+        <div class="bite-card">
+            <h3>Order from the menu</h3>
+            @foreach (var item in _menuItems)
+            {
+                <div class="bite-row">
+                    <span>@item.Name — $@item.Price.ToString("0.00")</span>
+                    <button class="secondary" @onclick="() => AddToCart(item.Id)" disabled="@(_orderStatus is not null)">Add to cart</button>
+                </div>
+            }
+            @if (!_menuItems.Any())
+            {
+                <p><em>@(Tokens.IsHost ? "Add a menu item above to get started." : "Waiting for the host to add menu items.")</em></p>
+            }
+        </div>
+
+        <div class="bite-card">
+            <h3>Shared cart</h3>
+            @foreach (var item in _cart)
+            {
+                <div class="bite-row">
+                    <span>@item.ParticipantName — @item.Quantity x @item.MenuItemName ($@((item.UnitPrice * item.Quantity).ToString("0.00")))</span>
+                    @if (item.ParticipantId == _myParticipantId && _orderStatus is null)
+                    {
+                        <button class="secondary" @onclick="() => RemoveFromCart(item.Id)">Remove</button>
+                    }
+                </div>
+            }
+            @if (!_cart.Any())
+            {
+                <p><em>Nobody has added anything yet.</em></p>
+            }
+        </div>
+
+        @if (Tokens.IsHost && _orderStatus is null)
+        {
+            <div class="bite-card">
+                <h3>Submit order</h3>
+                <label>Split mode</label>
+                <select @bind="_splitMode">
+                    <option value="Equal">Equal split</option>
+                    <option value="PerItem">Per-item split</option>
+                </select>
+                <input placeholder="Tax" @bind="_tax" />
+                <input placeholder="Tip" @bind="_tip" />
+                <input placeholder="Delivery fee" @bind="_deliveryFee" />
+                <p><em>Payment collection (Stripe) happens per participant client-side before this step in the full build — this MVP submits without capturing payment methods yet.</em></p>
+                <button class="primary" @onclick="SubmitOrder">Submit order</button>
+            </div>
+        }
+
+        @if (_receipts.Any())
+        {
+            <div class="bite-card">
+                <h3>Receipts</h3>
+                @foreach (var r in _receipts)
+                {
+                    <div class="bite-row">
+                        <span>@r.ParticipantName</span>
+                        <span>$@r.AmountOwed.ToString("0.00") — @(r.PaymentCaptured ? "paid" : "pending")</span>
+                    </div>
+                }
+                <button class="secondary" @onclick="DownloadReceiptPdf">Download PDF receipt</button>
+            </div>
+        }
+
+        @if (Tokens.IsHost && _orderStatus is not null && _orderStatus != "Delivered")
+        {
+            <div class="bite-card">
+                <h3>Advance status</h3>
+                <button class="secondary" @onclick="AdvanceStatus">Mark next stage</button>
+            </div>
+        }
+
+        @if (_error is not null)
+        {
+            <p class="bite-error">@_error</p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+
+    private List<ParticipantDto> _participants = new();
+    private List<MenuItemDto> _menuItems = new();
+    private List<CartItemDto> _cart = new();
+    private List<ReceiptDto> _receipts = new();
+    private Guid? _orderId;
+    private string? _orderStatus;
+    private string? _error;
+    private string? _reconnectBanner;
+
+    private string _newItemName = "";
+    private string _newItemPrice = "";
+    private string _splitMode = "Equal";
+    private string _tax = "0";
+    private string _tip = "0";
+    private string _deliveryFee = "0";
+
+    private static readonly string[] StatusOrder = { "Confirmed", "Preparing", "OutForDelivery", "Delivered" };
+    private Guid? _myParticipantId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tokens.ParticipantToken is null || Tokens.SessionId != SessionId)
+            return;
+
+        _myParticipantId = Tokens.ParticipantId;
+        await RefreshAllAsync();
+
+        Hub.CartUpdated += OnCartUpdated;
+        Hub.OrderStatusChanged += OnOrderStatusChanged;
+        Hub.Reconnecting += () => { _reconnectBanner = "Reconnecting..."; InvokeAsync(StateHasChanged); };
+        Hub.Reconnected += () => { _reconnectBanner = null; InvokeAsync(StateHasChanged); };
+        Hub.ConnectionLost += () => { _reconnectBanner = "Connection lost — refresh to reconnect."; InvokeAsync(StateHasChanged); };
+
+        await Hub.ConnectAsync(SessionId, Tokens.ParticipantToken);
+    }
+
+    private async Task RefreshAllAsync()
+    {
+        _participants = await Api.GetParticipantsAsync(SessionId);
+        _menuItems = await Api.GetMenuItemsAsync(SessionId);
+        _cart = await Api.GetCartAsync(SessionId);
+    }
+
+    private void OnCartUpdated(CartEvent evt) => InvokeAsync(async () =>
+    {
+        _cart = await Api.GetCartAsync(SessionId);
+        StateHasChanged();
+    });
+
+    private void OnOrderStatusChanged(OrderStatusUpdate evt) => InvokeAsync(() =>
+    {
+        _orderId = evt.OrderId;
+        _orderStatus = evt.Status;
+        StateHasChanged();
+    });
+
+    private async Task AddMenuItem()
+    {
+        if (!decimal.TryParse(_newItemPrice, out var price) || string.IsNullOrWhiteSpace(_newItemName))
+        {
+            _error = "Enter a name and a valid price.";
+            return;
+        }
+
+        var result = await Api.AddMenuItemAsync(SessionId, _newItemName, null, price);
+        if (result is not null)
+        {
+            _menuItems.Add(result);
+            _newItemName = "";
+            _newItemPrice = "";
+        }
+    }
+
+    private async Task AddToCart(Guid menuItemId) => await Api.AddCartItemAsync(SessionId, menuItemId, 1, null);
+
+    private async Task RemoveFromCart(Guid cartItemId) => await Api.RemoveCartItemAsync(SessionId, cartItemId);
+
+    private async Task SubmitOrder()
+    {
+        _error = null;
+        decimal.TryParse(_tax, out var tax);
+        decimal.TryParse(_tip, out var tip);
+        decimal.TryParse(_deliveryFee, out var deliveryFee);
+
+        var result = await Api.SubmitOrderAsync(SessionId, _splitMode, tax, tip, deliveryFee, new Dictionary<Guid, string>());
+        if (result is null)
+        {
+            _error = "Couldn't submit the order.";
+            return;
+        }
+
+        _orderId = result.OrderId;
+        _orderStatus = result.Status;
+        _receipts = result.Receipts.ToList();
+    }
+
+    private async Task DownloadReceiptPdf()
+    {
+        if (_orderId is null) return;
+        var bytes = await Api.GetReceiptPdfAsync(SessionId, _orderId.Value);
+        if (bytes is null)
+        {
+            _error = "Couldn't download the receipt.";
+            return;
+        }
+        await JS.InvokeVoidAsync("biteShareDownloadFile", $"biteshare-receipt-{_orderId}.pdf", Convert.ToBase64String(bytes), "application/pdf");
+    }
+
+    private async Task AdvanceStatus()
+    {
+        if (_orderId is null || _orderStatus is null) return;
+        var currentIndex = Array.IndexOf(StatusOrder, _orderStatus);
+        if (currentIndex < 0 || currentIndex >= StatusOrder.Length - 1) return;
+
+        await Api.UpdateOrderStatusAsync(SessionId, _orderId.Value, StatusOrder[currentIndex + 1]);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await Hub.DisposeAsync();
+    }
+}

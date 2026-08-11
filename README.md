@@ -68,8 +68,20 @@ The API reads connection strings and secrets from `appsettings.json` for local d
 ```bash
 dotnet user-secrets init --project src/BiteShare.Api
 dotnet user-secrets set "ConnectionStrings:Default" "<your-local-connection-string>" --project src/BiteShare.Api
+dotnet user-secrets set "Jwt:SigningKey" "<a-long-random-string-at-least-32-chars>" --project src/BiteShare.Api
 dotnet user-secrets set "Stripe:SecretKey" "<your-test-key>" --project src/BiteShare.Api
 ```
+
+The API will still start without `Jwt:SigningKey` set (it falls back to an obviously-fake
+dev placeholder so `dotnet run` doesn't crash on a fresh clone), but auth will only work
+correctly once every team member's local API uses the *same* signing key — set it via
+user-secrets, don't rely on the fallback past your very first run.
+
+## Further docs
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system diagram, the two-JWT-type model, SignalR reconnect behavior, cost-splitting rules
+- [`docs/API.md`](docs/API.md) — endpoint reference
+- [`docs/MIGRATIONS.md`](docs/MIGRATIONS.md) — generating the initial EF Core migration (not checked in yet — needs the .NET SDK)
 
 ## Team & roles
 

@@ -16,5 +16,22 @@
         <a class="dismiss">🗙</a>
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
+    <script>
+        // Triggers a browser download from bytes handed over by .NET (used for the
+        // itemized PDF receipt, which needs an authenticated fetch rather than a
+        // plain <a href> — a bare link wouldn't carry the Bearer token).
+        window.biteShareDownloadFile = (fileName, base64Bytes, contentType) => {
+            const bytes = atob(base64Bytes);
+            const buffer = new Uint8Array(bytes.length);
+            for (let i = 0; i < bytes.length; i++) buffer[i] = bytes.charCodeAt(i);
+            const blob = new Blob([buffer], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            link.click();
+            URL.revokeObjectURL(url);
+        };
+    </script>
 </body>
 </html>
