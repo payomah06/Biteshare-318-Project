@@ -1,9 +1,10 @@
 using BiteShare.Shared.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace BiteShare.Data;
 
-public class BiteShareDbContext : DbContext
+public class BiteShareDbContext : IdentityDbContext<ApplicationUser>
 {
     public BiteShareDbContext(DbContextOptions<BiteShareDbContext> options) : base(options) { }
 
@@ -22,9 +23,14 @@ public class BiteShareDbContext : DbContext
         {
             entity.HasIndex(s => s.JoinCode).IsUnique();
             entity.Property(s => s.Name).HasMaxLength(200).IsRequired();
+            entity.Property(s => s.JoinCode).HasMaxLength(12).IsRequired();
             entity.HasMany(s => s.Participants)
                   .WithOne()
                   .HasForeignKey(p => p.SessionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(s => s.Orders)
+                  .WithOne()
+                  .HasForeignKey(o => o.SessionId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -41,11 +47,16 @@ public class BiteShareDbContext : DbContext
         {
             entity.Property(m => m.Name).HasMaxLength(200).IsRequired();
             entity.Property(m => m.Price).HasColumnType("decimal(10,2)");
+            entity.HasIndex(m => m.SessionId);
         });
 
         modelBuilder.Entity<CartItem>(entity =>
         {
             entity.Property(c => c.Quantity).HasDefaultValue(1);
+            entity.HasOne<MenuItem>()
+                  .WithMany()
+                  .HasForeignKey(c => c.MenuItemId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Order>(entity =>
@@ -63,6 +74,7 @@ public class BiteShareDbContext : DbContext
         modelBuilder.Entity<Receipt>(entity =>
         {
             entity.Property(r => r.AmountOwed).HasColumnType("decimal(10,2)");
+            entity.HasIndex(r => new { r.OrderId, r.ParticipantId }).IsUnique();
         });
     }
 }

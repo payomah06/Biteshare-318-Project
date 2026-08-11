@@ -27,3 +27,21 @@ html, body {
     right: 0.75rem;
     top: 0.5rem;
 }
+
+/* --- BiteShare additions ------------------------------------------- */
+.bite-container { max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+.bite-card { border: 1px solid #e2e2e2; border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem; background: #fff; }
+.bite-tabs { display: flex; gap: .5rem; margin-bottom: 1rem; }
+.bite-tabs button { flex: 1; padding: .6rem; border-radius: 8px; border: 1px solid #ccc; background: #f7f7f7; cursor: pointer; }
+.bite-tabs button.active { background: #ff6b35; color: #fff; border-color: #ff6b35; }
+.bite-row { display: flex; justify-content: space-between; align-items: center; padding: .4rem 0; border-bottom: 1px solid #f0f0f0; }
+.bite-badge { display: inline-block; padding: .15rem .5rem; border-radius: 999px; font-size: .75rem; background: #eee; }
+.bite-badge.status-open { background: #d7f0d3; }
+.bite-badge.status-confirmed, .bite-badge.status-preparing { background: #fde9c8; }
+.bite-badge.status-outfordelivery { background: #cfe3fb; }
+.bite-badge.status-delivered { background: #d3d3d3; }
+.bite-banner { padding: .5rem .75rem; border-radius: 6px; background: #fff3cd; margin-bottom: 1rem; font-size: .9rem; }
+.bite-error { color: #b00020; font-size: .9rem; margin: .25rem 0; }
+input, select { padding: .45rem; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; margin-bottom: .5rem; }
+button.primary { background: #ff6b35; color: #fff; border: none; padding: .55rem 1rem; border-radius: 6px; cursor: pointer; }
+button.secondary { background: #fff; border: 1px solid #ccc; padding: .55rem 1rem; border-radius: 6px; cursor: pointer; }

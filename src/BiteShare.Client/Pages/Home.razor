@@ -1,9 +1,129 @@
 @page "/"
+@inject ApiClient Api
+@inject AuthTokenStore Tokens
+@inject NavigationManager Nav
 
 <PageTitle>BiteShare</PageTitle>
 
-<h1>BiteShare</h1>
-<p>Create a session to start a shared order, or join one with a code.</p>
+<div class="bite-container">
+    <h1>BiteShare</h1>
+    <p>Create a session to start a shared order, or join one with a code.</p>
 
-@* TODO (Joseph — design-consistency owner):
-   host vs. participant role-aware views, component library, nav bar *@
+    <div class="bite-tabs">
+        <button class="@(_tab == Tab.Host ? "active" : "")" @onclick="() => _tab = Tab.Host">Host a session</button>
+        <button class="@(_tab == Tab.Join ? "active" : "")" @onclick="() => _tab = Tab.Join">Join with a code</button>
+    </div>
+
+    @if (_tab == Tab.Host)
+    {
+        <div class="bite-card">
+            @if (Tokens.IdentityToken is null)
+            {
+                <h3>@(_authMode == AuthMode.Login ? "Log in" : "Create an account")</h3>
+                <input placeholder="Email" @bind="_email" />
+                <input placeholder="Password" type="password" @bind="_password" />
+                @if (_authMode == AuthMode.Register)
+                {
+                    <input placeholder="Your name" @bind="_displayName" />
+                }
+                <button class="primary" @onclick="SubmitAuth">@(_authMode == AuthMode.Login ? "Log in" : "Register")</button>
+                <button class="secondary" @onclick="ToggleAuthMode">
+                    @(_authMode == AuthMode.Login ? "Need an account? Register" : "Already have one? Log in")
+                </button>
+            }
+            else
+            {
+                <p>Signed in as <strong>@Tokens.IdentityDisplayName</strong></p>
+                <h3>New session</h3>
+                <input placeholder="Session name (e.g. Friday lunch)" @bind="_sessionName" />
+                <button class="primary" @onclick="CreateSession">Create session</button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="bite-card">
+            <h3>Join a session</h3>
+            <input placeholder="Join code" @bind="_joinCode" />
+            <input placeholder="Your name" @bind="_displayName" />
+            <button class="primary" @onclick="JoinAsGuest">Join</button>
+        </div>
+    }
+
+    @if (_error is not null)
+    {
+        <p class="bite-error">@_error</p>
+    }
+</div>
+
+@code {
+    private enum Tab { Host, Join }
+    private enum AuthMode { Login, Register }
+
+    private Tab _tab = Tab.Join;
+    private AuthMode _authMode = AuthMode.Register;
+    private string _email = "";
+    private string _password = "";
+    private string _displayName = "";
+    private string _sessionName = "";
+    private string _joinCode = "";
+    private string? _error;
+
+    private void ToggleAuthMode() => _authMode = _authMode == AuthMode.Login ? AuthMode.Register : AuthMode.Login;
+
+    private async Task SubmitAuth()
+    {
+        _error = null;
+        var result = _authMode == AuthMode.Login
+            ? await Api.LoginAsync(_email, _password)
+            : await Api.RegisterAsync(_email, _password, _displayName);
+
+        if (result is null)
+        {
+            _error = "Couldn't sign in — check your details and try again.";
+            return;
+        }
+
+        await Tokens.SetIdentityAsync(result.Token, result.DisplayName);
+    }
+
+    private async Task CreateSession()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_sessionName))
+        {
+            _error = "Give the session a name.";
+            return;
+        }
+
+        var result = await Api.CreateSessionAsync(_sessionName, null);
+        if (result is null)
+        {
+            _error = "Couldn't create the session.";
+            return;
+        }
+
+        await Tokens.SetParticipantAsync(result.ParticipantToken, result.Session.Id, result.ParticipantId, isHost: true);
+        Nav.NavigateTo($"/session/{result.Session.Id}");
+    }
+
+    private async Task JoinAsGuest()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_joinCode) || string.IsNullOrWhiteSpace(_displayName))
+        {
+            _error = "Enter both a join code and your name.";
+            return;
+        }
+
+        var result = await Api.GuestJoinAsync(_joinCode.Trim().ToUpperInvariant(), _displayName);
+        if (result is null)
+        {
+            _error = "Couldn't find that session — check the code.";
+            return;
+        }
+
+        await Tokens.SetParticipantAsync(result.GuestToken, result.SessionId, result.ParticipantId, isHost: false);
+        Nav.NavigateTo($"/session/{result.SessionId}");
+    }
+}
